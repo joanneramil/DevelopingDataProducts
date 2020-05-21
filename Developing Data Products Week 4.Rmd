@@ -1,0 +1,83 @@
+---
+title: "Developing Data Products Week 4"
+date: "May 20, 2020"
+output: slidy_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Application description
+
+This application predicts the price of a diamond based on its carat and cut. To use this app, we simply need to use the slider to select a carat value between 0 and 5, and choose a type of cut (*Fair, Good, Very Good, Premium*, or *Ideal*)
+
+## UI Code
+
+The following code was used to create the ui.R document. It creates a slider for the carat value and a dropdown for the cut type. Then in the main panel, it displays the plot and prediction of price by carat and highlights the cut of interest.
+
+```{r, echo=TRUE, eval=FALSE}
+library(shiny)
+library(shinyWidgets)
+library(ggplot2)
+
+shinyUI(fluidPage(
+        titlePanel("Predict Price of Diamond from Carat and Cut"),
+        sidebarLayout(
+                sidebarPanel(
+                        sliderInput("slidercarat",
+                                    "How many carats?", 0, 5.5, value = 0, step = .25, round = FALSE),
+                        selectInput("slidercut", "What is the diamond cut?",
+                                    choices = c("Fair", "Good", "Very Good", "Premium", "Ideal"))),
+                submitButton("Submit")
+        ),
+        mainPanel(
+                plotOutput("Plot"),
+                h3("Predicted Diamond Price"),
+                textOutput("pred")
+        )
+)
+)
+```
+
+## Server Code
+
+The following code was used to create the server.R document. It creates regression model to predict the price of a diamond by its carat and cut type.
+```{r cars, echo = TRUE, eval=FALSE}
+library(shiny)
+library(ggplot2)
+library(gghighlight)
+data(diamonds)
+
+shinyServer(function(input, output) {
+        modelpred <- reactive({
+                cutsub <-subset(diamonds, cut==input$slidercut)
+                model <- lm(price ~ carat, cutsub)
+                caratinput <- input$slidercarat
+                predict(model, newdata=data.frame(carat=caratinput))
+        })
+        
+        output$Plot <- renderPlot({
+                cutinput <- input$slidercut
+                cutsub <-subset(diamonds, cut==input$slidercut)
+                g <- ggplot(diamonds, aes(x=carat, y=price, color=cut)) +
+                        geom_point() + 
+                        gghighlight(diamonds$cut == cutinput, label_key=cut) + 
+                        geom_smooth(aes(x=cutsub$carat, y=cutsub$price),
+                                    method="lm", col="purple") +
+                        geom_point(aes(x=cutsub$carat, y=cutsub$price), colour="purple")
+                g
+        })
+        
+        output$pred <- renderText({
+                paste(c(round(modelpred(),2),"$"))
+        })
+})
+```
+
+## Relevant Links
+
+The Application can be found here: <http://jramil.shinyapps.io/MyFirstApp/>.
+
+The complete code used to create this application can be found here:
+<http://github.com/joanneramil/DevelopingDataProducts>
